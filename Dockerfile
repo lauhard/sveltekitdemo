@@ -17,7 +17,7 @@ EXPOSE 4000
 ENV NODE_ENV=production
 
 # set env to port 4000, this is the port the app will run on
-ENV PORT=4000
+ENV PORT=4001
 
 # this command will be called when the container starts
 CMD ["node", "build"]
