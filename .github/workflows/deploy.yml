@@ -1,0 +1,79 @@
+name: Build and Deploy to Dev01
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      #install cloudflare warp client
+      - name: Install Cloudflare Warp Client
+        run: |
+          curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ focal main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
+          sudo apt-get update
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends cloudflare-warp
+
+      #add mdm.xml file to warp client directory
+      #onb
+      - name: Add mdm.xml File
+        run: |
+          sudo tee /var/lib/cloudflare-warp/mdm.xml > /dev/null <<EOF
+          <dict>
+            <key>auth_client_id</key>
+            <string>${{ secrets.CLOUDFLARE_SERVICE_TOKEN_CLIENT_ID }}</string>
+            <key>auth_client_secret</key>
+            <string>${{ secrets.CLOUDFLARE_SERVICE_TOKEN_SECRET }}</string>
+            <key>organization</key>
+            <string>${{ secrets.ORGANIZATION }}</string>
+            <key>onboarding</key>
+            <false/>
+          </dict>
+          EOF
+
+      - name: Check mdm.xml File
+        run: |
+          sudo cat /var/lib/cloudflare-warp/mdm.xml
+          sudo ls -la /var/lib/cloudflare-warp
+
+      - name: Connect Warp
+        run: |
+          sudo systemctl restart warp-svc
+          sleep 5
+          sudo warp-cli --accept-tos connect
+          sleep 5
+          sudo warp-cli --accept-tos status
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.RASPBI_IP }} >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+      - name: Test SSH Connection
+        run: ssh ${{ secrets.USERNAME }}@${{ secrets.RASPBI_IP }} "echo 'SSH Verbindung erfolgreich'"
+
+      - name: Copy All Necesseary Files
+        run: |
+            rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            package.json \
+            package-lock.json \
+            Dockerfile \
+            build/ \
+            ${{ secrets.USERNAME }}@${{ secrets.RASPBI_IP }}:~/dev01/apps/sveltekitdemo
+
+      - name: Deploy
+        run: |
+            ssh ${{ secrets.USERNAME }}@${{ secrets.RASPBI_IP }} "cd /home/andreas/dev01 && docker compose -f docker-compose.apps.yml up -d --build demo"
+
