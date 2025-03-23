@@ -75,5 +75,5 @@ jobs:
 
       - name: Deploy
         run: |
-            ssh ${{ secrets.USERNAME }}@${{ secrets.RASPBI_IP }} "cd /home/andreas/dev01 && docker compose -f docker-compose.apps.yml up -d --build demo"
+            ssh ${{ secrets.USERNAME }}@${{ secrets.RASPBI_IP }} "cd /home/andreas/dev01 && docker compose -f docker-compose.apps.yml up -d --build sveltekitdemo"
 
