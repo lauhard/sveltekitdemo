@@ -67,10 +67,7 @@ jobs:
       - name: Copy All Necesseary Files
         run: |
             rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
-            package.json \
-            package-lock.json \
-            Dockerfile \
-            build/ \
+            ./apps/sveltekitdemo/ \
             ${{ secrets.USERNAME }}@${{ secrets.RASPBI_IP }}:~/dev01/apps/sveltekitdemo
 
       - name: Deploy

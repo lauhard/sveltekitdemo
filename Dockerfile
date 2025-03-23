@@ -11,7 +11,7 @@ COPY build ./build
 # --omit=dev is used to exclude devDependencies
 RUN npm ci --omit=dev
 
-EXPOSE 4000
+EXPOSE 4001
 
 # SET env to production to avoid unnecessary logs
 ENV NODE_ENV=production
